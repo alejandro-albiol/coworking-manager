@@ -33,5 +33,16 @@ Comprehensive management system for coworking spaces with IoT control.
 - `npm run dev`: Start both frontend and backend in development mode
 - `npm run build`: Build both projects
 - `npm run start`: Start production server
-- `npm run test`: Run tests
-- `npm run test:ui`: Run tests with Vitest UI
+- `npm test`: Run tests
+
+## Database Setup
+
+The database schema is located in `backend/db/schema.sql`. To set up the database:
+
+```bash
+# Connect to PostgreSQL
+psql -U postgres
+
+# Run the schema file
+\i backend/db/schema.sql
+```
