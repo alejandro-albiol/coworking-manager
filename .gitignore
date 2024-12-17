@@ -7,7 +7,10 @@ node_modules
 .env
 frontend/.env
 backend/.env
-
+.env
+.env.*
+!.env.example
+!.env.admin.example
 # Build
 dist
 /frontend/dist
