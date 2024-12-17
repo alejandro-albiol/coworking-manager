@@ -1,21 +1,32 @@
 import jwt from 'jsonwebtoken';
-import { ITokenPayload } from '../interfaces/auth/ITokenPayLoad';
+import { ITokenPayloadDTO } from '../models/interfaces/dtos/auth/ITokenPayloadDto';
+import { DataBaseResponse } from '../models/responses/DataBaseResponse';
 
 export class TokenService {
-    static generateToken(payload: object, jwtSecret: string): string {
+    static generateToken(payload: object, jwtSecret: string): DataBaseResponse<string> {
         if (!jwtSecret) {
-            throw new Error('JWT_SECRET is required');
+            return { isSuccess: false, message: 'JWT_SECRET is required', data: null };
         }
-        return jwt.sign(payload, jwtSecret, { 
-            expiresIn: '24h',
-            algorithm: 'HS256'
-        });
+        try {
+            const token = jwt.sign(payload, jwtSecret, { 
+                expiresIn: '24h',
+                algorithm: 'HS256'
+            });
+            return { isSuccess: true, message: 'Token generated successfully', data: token };
+        } catch (error) {
+            return { isSuccess: false, message: 'Failed to generate token', data: null };
+        }
     }
 
-    static verifyToken(token: string, jwtSecret: string): ITokenPayload {
+    static verifyToken(token: string, jwtSecret: string): DataBaseResponse<ITokenPayloadDTO> {
         if (!jwtSecret) {
-            throw new Error('JWT_SECRET is required');
+            return { isSuccess: false, message: 'JWT_SECRET is required', data: null };
         }
-        return jwt.verify(token, jwtSecret) as ITokenPayload;
+        try {
+            const decoded = jwt.verify(token, jwtSecret) as ITokenPayloadDTO;
+            return { isSuccess: true, message: 'Token verified successfully', data: decoded };
+        } catch (error) {
+            return { isSuccess: false, message: 'Failed to verify token', data: null };
+        }
     }
 }

@@ -1,33 +1,39 @@
 import { Response, NextFunction } from 'express';
-import { Pool } from 'pg';
-import { TenantRequest } from '../types/TenantRequest';
+import { TenantRequest } from '../models/types/TenantRequest';
+import { DatabaseService } from '../services/DatabaseService';
 
 export class TenantMiddleware {
-  private readonly pool: Pool;
+    static async handle(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const schema = await TenantMiddleware.getTenantSchema(req);
+            if (!schema) {
+                res.status(400).json({ error: 'Invalid tenant' });
+                return;
+            }
 
-  constructor(pool: Pool) {
-    this.pool = pool;
-  }
-
-  public async handle(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {
-    try {
-      const schema = await this.getTenantSchema(req);
-      if (schema) {
-        req.tenantSchema = schema;
-        next();
-      } else {
-        res.status(400).json({ error: 'Invalid tenant' });
-      }
-    } catch (error) {
-      res.status(500).json({ error: 'Internal server error' });
+            req.tenantSchema = schema;
+            next();
+        } catch (error) {
+            res.status(500).json({ error: 'Internal server error' });
+        }
     }
-  }
-  private async getTenantSchema(req: TenantRequest): Promise<string | null> {
-    const subdomain = req.headers['x-tenant-id'] || process.env.DEFAULT_SCHEMA;
-    const result = await this.pool.query(
-      'SELECT schema_name FROM public.tenants WHERE subdomain = $1',
-      [subdomain]
-    );
-    return result.rows.length > 0 ? result.rows[0].schema_name : null;
-  }
+
+    static async getTenantSchema(req: TenantRequest): Promise<string | null> {
+        try {
+            const subdomain = req.headers['x-tenant-id'] || process.env.DEFAULT_SCHEMA;
+            if (!subdomain) {
+                throw new Error('Invalid tenant');
+            }
+            const result = await DatabaseService.getTenant(
+                'SELECT schema_name FROM public.tenants WHERE subdomain = $1',
+                [subdomain]
+            );
+            if (!result.isSuccess || !result.data) {
+                throw new Error('Invalid tenant');
+            }
+            return result.data.schema_name;
+        } catch (error) {
+            return null;
+        }
+    }
 }

@@ -1,20 +1,24 @@
-import { Pool } from 'pg';
+import dotenv from 'dotenv';
+import path from 'path';
 
-export const pool = new Pool({
-  user: process.env.DB_USER,
-  host: process.env.DB_HOST,
-  database: process.env.DB_NAME,
-  password: process.env.DB_PASSWORD,
-  port: Number(process.env.DB_PORT),
-});
+const validEnvironments = ['development', 'test', 'production'] as const;
+const environment = process.env.NODE_ENV as typeof validEnvironments[number];
 
-export const setTenantSchema = async (schema: string) => {
-  const client = await pool.connect();
-  try {
-    await client.query(`SET search_path TO ${schema}`);
-    return client;
-  } catch (error) {
-    client.release();
-    throw error;
-  }
+if (environment && !validEnvironments.includes(environment)) {
+    console.warn(`Invalid NODE_ENV: ${environment}. Using 'development'`);
+}
+
+const envPath = path.resolve(process.cwd(), '.env');
+dotenv.config({ path: envPath });
+
+export const config = {
+    environment: environment || 'development',
+    database: {
+        host: process.env.DB_HOST,
+        port: parseInt(process.env.DB_PORT || '5432'),
+        name: process.env.DB_NAME,
+        user: process.env.DB_USER,
+        password: process.env.DB_PASSWORD,
+        defaultSchema: process.env.DEFAULT_SCHEMA || 'public'
+    }
 };

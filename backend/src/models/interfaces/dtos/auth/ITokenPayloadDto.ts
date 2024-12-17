@@ -1,7 +1,6 @@
-export interface ITokenPayload {
+export interface ITokenPayloadDTO {
     userId: number;
     roleId?: number;
-    active: boolean;
     iat?: number;
     exp?: number;
 }
