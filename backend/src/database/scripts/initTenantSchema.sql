@@ -1,27 +1,6 @@
-CREATE DATABASE coworking_db;
+CREATE TYPE space_status AS ENUM ('available', 'occupied', 'maintenance', 'inactive');
 
-\c coworking_db;
-
--- Create public schema for tenant management
-CREATE SCHEMA IF NOT EXISTS public;
-
-CREATE TABLE public.tenants (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    subdomain VARCHAR(50) UNIQUE NOT NULL,
-    schema_name VARCHAR(50) UNIQUE NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Create first tenant schema
-CREATE SCHEMA IF NOT EXISTS tenant_1;
-
--- Create enum types
-CREATE TYPE tenant_1.space_status AS ENUM ('available', 'occupied', 'maintenance', 'inactive');
-
--- Create tables in tenant_1 schema
-CREATE TABLE tenant_1.roles (
+CREATE TABLE roles (
     id SERIAL PRIMARY KEY,
     name VARCHAR(50) NOT NULL,
     description TEXT,
@@ -29,37 +8,37 @@ CREATE TABLE tenant_1.roles (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE tenant_1.users (
+CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     first_name VARCHAR(100),
     last_name VARCHAR(100),
-    role_id INTEGER REFERENCES tenant_1.roles(id),
+    role_id INTEGER REFERENCES roles(id),
     active BOOLEAN DEFAULT true,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     deleted_at TIMESTAMP
 );
 
-CREATE TABLE tenant_1.contact_types (
+CREATE TABLE contact_types (
     id SERIAL PRIMARY KEY,
     name VARCHAR(50) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE tenant_1.user_contacts (
+CREATE TABLE user_contacts (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES tenant_1.users(id),
-    type_id INTEGER REFERENCES tenant_1.contact_types(id),
+    user_id INTEGER REFERENCES users(id),
+    type_id INTEGER REFERENCES contact_types(id),
     value VARCHAR(255) NOT NULL,
     is_primary BOOLEAN DEFAULT false,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE tenant_1.space_types (
+CREATE TABLE space_types (
     id SERIAL PRIMARY KEY,
     name VARCHAR(50) NOT NULL,
     description TEXT,
@@ -67,24 +46,24 @@ CREATE TABLE tenant_1.space_types (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE tenant_1.spaces (
+CREATE TABLE spaces (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
-    type_id INTEGER REFERENCES tenant_1.space_types(id),
+    type_id INTEGER REFERENCES space_types(id),
     capacity INTEGER,
     price_per_hour NUMERIC(10,2),
     price_per_day NUMERIC(10,2),
     price_per_month NUMERIC(10,2),
     description TEXT,
-    status tenant_1.space_status DEFAULT 'available',
+    status space_status DEFAULT 'available',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     deleted_at TIMESTAMP
 );
 
-CREATE TABLE tenant_1.space_prices_history (
+CREATE TABLE space_prices_history (
     id SERIAL PRIMARY KEY,
-    space_id INTEGER REFERENCES tenant_1.spaces(id),
+    space_id INTEGER REFERENCES spaces(id),
     price_per_hour NUMERIC(10,2),
     price_per_day NUMERIC(10,2),
     price_per_month NUMERIC(10,2),
@@ -93,7 +72,7 @@ CREATE TABLE tenant_1.space_prices_history (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE tenant_1.resources (
+CREATE TABLE resources (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     description TEXT,
@@ -102,10 +81,10 @@ CREATE TABLE tenant_1.resources (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE tenant_1.bookings (
+CREATE TABLE bookings (
     id SERIAL PRIMARY KEY,
-    space_id INTEGER REFERENCES tenant_1.spaces(id),
-    user_id INTEGER REFERENCES tenant_1.users(id),
+    space_id INTEGER REFERENCES spaces(id),
+    user_id INTEGER REFERENCES users(id),
     start_time TIMESTAMP NOT NULL,
     end_time TIMESTAMP NOT NULL,
     status VARCHAR(20) DEFAULT 'pending',
@@ -114,17 +93,17 @@ CREATE TABLE tenant_1.bookings (
     deleted_at TIMESTAMP
 );
 
-CREATE TABLE tenant_1.booking_resources (
+CREATE TABLE booking_resources (
     id SERIAL PRIMARY KEY,
-    booking_id INTEGER REFERENCES tenant_1.bookings(id),
-    resource_id INTEGER REFERENCES tenant_1.resources(id),
+    booking_id INTEGER REFERENCES bookings(id),
+    resource_id INTEGER REFERENCES resources(id),
     quantity INTEGER NOT NULL DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE tenant_1.invoices (
+CREATE TABLE invoices (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES tenant_1.users(id),
+    user_id INTEGER REFERENCES users(id),
     total_amount NUMERIC(10,2) NOT NULL,
     status VARCHAR(20) DEFAULT 'pending',
     due_date TIMESTAMP,
@@ -132,28 +111,28 @@ CREATE TABLE tenant_1.invoices (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE tenant_1.invoice_items (
+CREATE TABLE invoice_items (
     id SERIAL PRIMARY KEY,
-    invoice_id INTEGER REFERENCES tenant_1.invoices(id),
-    booking_id INTEGER REFERENCES tenant_1.bookings(id),
+    invoice_id INTEGER REFERENCES invoices(id),
+    booking_id INTEGER REFERENCES bookings(id),
     description TEXT NOT NULL,
     amount NUMERIC(10,2) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE tenant_1.payments (
+CREATE TABLE payments (
     id SERIAL PRIMARY KEY,
-    invoice_id INTEGER REFERENCES tenant_1.invoices(id),
+    invoice_id INTEGER REFERENCES invoices(id),
     amount NUMERIC(10,2) NOT NULL,
     payment_method VARCHAR(50) NOT NULL,
     payment_date TIMESTAMP NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE tenant_1.maintenance_records (
+CREATE TABLE maintenance_records (
     id SERIAL PRIMARY KEY,
-    space_id INTEGER REFERENCES tenant_1.spaces(id),
-    reported_by INTEGER REFERENCES tenant_1.users(id),
+    space_id INTEGER REFERENCES spaces(id),
+    reported_by INTEGER REFERENCES users(id),
     description TEXT NOT NULL,
     status VARCHAR(20) DEFAULT 'pending',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -161,6 +140,8 @@ CREATE TABLE tenant_1.maintenance_records (
     resolved_at TIMESTAMP
 );
 
--- Insert first tenant
-INSERT INTO public.tenants (name, subdomain, schema_name) 
-VALUES ('Demo Coworking', 'demo', 'tenant_1');
+INSERT INTO roles (name, description) 
+VALUES 
+    ('admin', 'Administrator role'),
+    ('user', 'Regular user role')
+ON CONFLICT (name) DO NOTHING; 

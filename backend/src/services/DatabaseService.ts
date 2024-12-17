@@ -1,6 +1,9 @@
 import { Pool, PoolClient } from 'pg';
 import { DataBaseResponse } from '../models/responses/DataBaseResponse';
 import { config } from '../config/database';
+import { ITenant } from '../models/interfaces/entities/ITenant';
+import fs from 'fs/promises';
+import path from 'path';
 
 export class DatabaseService {
     private static pool: Pool;
@@ -8,11 +11,6 @@ export class DatabaseService {
     private static getPool(): Pool {
         if (!this.pool) {
             const dbConfig = config.database;
-            console.log('DB Config:', {
-                ...dbConfig,
-                password: dbConfig.password ? 'REDACTED' : 'undefined'
-            });
-            
             this.pool = new Pool({
                 host: dbConfig.host,
                 port: dbConfig.port,
@@ -39,28 +37,66 @@ export class DatabaseService {
         }
     }
 
-    static async getTenant(query: string, values: any[]): Promise<DataBaseResponse<any>> {
+    static async getTenant(subdomain: string): Promise<DataBaseResponse<ITenant>> {
+        const client = await this.getPool().connect();
         try {
-            const clientResponse = await DatabaseService.getClient(process.env.DEFAULT_SCHEMA || '');
-            if (!clientResponse.isSuccess) {
-                throw new Error('Database connection failed');
-            }
-            const client = clientResponse.data;
-            if (!client) {
-                throw new Error('Database connection failed');
-            }
-            const result = await client.query(query, values);
-            return { 
-                isSuccess: true, 
-                message: 'Tenant found successfully', 
-                data: result.rows[0] 
+            const result = await client.query(
+                'SELECT * FROM public.tenants WHERE subdomain = $1',
+                [subdomain]
+            );
+            return {
+                isSuccess: true,
+                message: 'Tenant found',
+                data: result.rows[0] || null
             };
         } catch (error) {
-            return { 
-                isSuccess: false, 
-                message: 'Failed to find tenant', 
-                data: null 
+            return {
+                isSuccess: false,
+                message: 'Tenant not found',
+                data: null
             };
+        } finally {
+            client.release();
+        }
+    }
+
+    static async createTenant(tenant: { subdomain: string; name: string }): Promise<DataBaseResponse<ITenant>> {
+        const client = await this.getPool().connect();
+        try {
+            await client.query('BEGIN');
+
+            const schemaName = `tenant_${tenant.subdomain}`;
+            const result = await client.query(
+                'INSERT INTO public.tenants (subdomain, schema_name, name) VALUES ($1, $2, $3) RETURNING *',
+                [tenant.subdomain, schemaName, tenant.name]
+            );
+
+            await client.query(`CREATE SCHEMA IF NOT EXISTS ${schemaName}`);
+            await client.query(`SET search_path TO ${schemaName}`);
+
+            const initScript = await fs.readFile(
+                path.join(__dirname, '../database/scripts/initTenantSchema.sql'),
+                'utf8'
+            );
+            await client.query(initScript);
+
+            await client.query('COMMIT');
+            return {
+                isSuccess: true,
+                message: 'Tenant created successfully',
+                data: result.rows[0]
+            };
+
+        } catch (error) {
+            await client.query('ROLLBACK');
+            console.error('Error creating tenant:', error);
+            return {
+                isSuccess: false,
+                message: 'Failed to create tenant',
+                data: null
+            };
+        } finally {
+            client.release();
         }
     }
 }
