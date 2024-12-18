@@ -1,6 +1,6 @@
 import { Response, NextFunction } from 'express';
 import { TenantMiddleware } from '../../src/middlewares/TenantMiddleware';
-import { TenantRequest } from '../../src/models/types/TenantRequest';
+import { TenantRequest } from '../../src/types/TenantRequest';
 
 describe('TenantMiddleware', () => {
     let mockRequest: Partial<TenantRequest>;

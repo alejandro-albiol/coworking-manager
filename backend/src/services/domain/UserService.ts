@@ -1,41 +1,49 @@
-import { ICreateUserDto } from "../models/interfaces/dtos/auth/ICreateUserDto";
-import { IUser } from "../models/interfaces/entities/IUser";
-import { DataBaseResponse } from "../models/responses/DataBaseResponse";
-import { HashService } from "./HashService";
-import { DatabaseService } from "./DatabaseService";
-import { IUserToAuthenticateDto } from "../models/interfaces/dtos/auth/IUserToAuthenticateDto";
-import { IFindUserByEmailDto } from "../models/interfaces/dtos/auth/IFindUserByEmailDto";
-import { IFindUserByIdDto } from "../models/interfaces/dtos/auth/IFindUserById";
-import { IUpdateUserDto } from "../models/interfaces/dtos/auth/IUpdateUserDto";
+import { IUser } from "../../models/entities/auth/IUser";
+import { DataBaseResponse } from "../../models/responses/DataBaseResponse";
+import { HashService } from "../core/HashService";
+import { DatabaseService } from "../core/DatabaseService";
+import { IUserToAuthenticateDto } from "../../models/dtos/auth/user/IUserToAuthenticateDto";
+import { IFindUserByEmailDto } from "../../models/dtos/auth/user/IFindUserByEmailDto";
+import { IFindUserByIdDto } from "../../models/dtos/auth/user/IFindUserById";
+import { IUpdateUserDto } from "../../models/dtos/auth/user/IUpdateUserDto";
+import { IUserInputDto } from "../../models/dtos/auth/user/IUserInputDto";
+import { UserRepository } from "../../repositories/UserRepository";
+import { ICreateUserDto } from "../../models/dtos/auth/user/ICreateUserDto";
+import { UserValidator } from "../../validators/user/UserValidator";
 
 export class UserService {
-    static async insertNewUser(userToCreate: ICreateUserDto, schema: string): Promise<DataBaseResponse<IUser>> {
+    static async insertNewUser(userInput: IUserInputDto, schema: string): Promise<DataBaseResponse<IUser>> {
+        const validation = UserValidator.validateCreate(userInput);
+        if (!validation.isValid) {
+            return { isSuccess: false, message: validation.message, data: null };
+        }
+
         let client;
         try {
-            const clientResponse = await DatabaseService.getClient(schema);
+            const database = new DatabaseService();
+            const userRepository = new UserRepository(database);
+            const clientResponse = await database.getClient(schema);
             if (!clientResponse.isSuccess || !clientResponse.data) {
                 throw new Error('Database connection failed');
             }
-
             client = clientResponse.data;
             
-            const hashResponse = await HashService.hash(userToCreate.password);
-            if (!hashResponse.isSuccess || !hashResponse.data) {
+            const hashResponse = await new HashService().hash(userInput.password);
+            if (!hashResponse) {
                 throw new Error('Failed to hash password');
             }
 
-            const result = await client.query(
-                'INSERT INTO users (email, password_hash, first_name, last_name, role_id) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-                [userToCreate.email, hashResponse.data, userToCreate.first_name, userToCreate.last_name, userToCreate.role_id]
-            );
-
-            return {
-                isSuccess: true,
-                message: 'User inserted successfully',
-                data: result.rows[0]
+            const userToCreate: ICreateUserDto = {
+                email: userInput.email,
+                password_hash: hashResponse,
+                first_name: userInput.first_name,
+                last_name: userInput.last_name,
+                role_id: userInput.role_id
             };
+
+            return userRepository.create(userToCreate, schema);
         } catch (error) {
-            return { isSuccess: false, message: 'User not inserted', data: null };
+            return { isSuccess: false, message: 'Failed to create user', data: null };
         } finally {
             if (client) {
                 client.release();
@@ -44,9 +52,15 @@ export class UserService {
     }
 
     static async findUserByEmail(userToFind: IFindUserByEmailDto, schema: string): Promise<DataBaseResponse<IUser>> {
+        const validation = UserValidator.validateFindByEmail(userToFind.email);
+        if (!validation.isValid) {
+            return { isSuccess: false, message: validation.message, data: null };
+        }
+
         let client;
         try {
-            const clientResponse = await DatabaseService.getClient(schema);
+            const database = new DatabaseService();
+            const clientResponse = await database.getClient(schema);
             if (!clientResponse.isSuccess || !clientResponse.data) {
                 throw new Error('Database connection failed');
             }
@@ -73,9 +87,15 @@ export class UserService {
     }
 
     static async findUserById(userToFind: IFindUserByIdDto, schema: string): Promise<DataBaseResponse<IUser>> {
+        const validation = UserValidator.validateFindById(userToFind.id);
+        if (!validation.isValid) {
+            return { isSuccess: false, message: validation.message, data: null };
+        }
+
         let client;
         try {
-            const clientResponse = await DatabaseService.getClient(schema);
+            const database = new DatabaseService();
+            const clientResponse = await database.getClient(schema);
             if (!clientResponse.isSuccess || !clientResponse.data) {
                 throw new Error('Database connection failed');
             }
@@ -102,6 +122,11 @@ export class UserService {
     }
 
     static async authenticateUser(userToAuthenticate: IUserToAuthenticateDto, schema: string): Promise<DataBaseResponse<IUser>> {
+        const validation = UserValidator.validateAuthenticate(userToAuthenticate);
+        if (!validation.isValid) {
+            return { isSuccess: false, message: validation.message, data: null };
+        }
+
         try {
             const userResponse = await UserService.findUserByEmail(
                 { email: userToAuthenticate.email }, 
@@ -112,12 +137,12 @@ export class UserService {
                 return { isSuccess: false, message: 'User not found', data: null };
             }
 
-            const verifyResponse = await HashService.verify(
+            const verifyResponse = await new HashService().compare(
                 userToAuthenticate.password, 
                 userResponse.data.password_hash
             );
 
-            if (!verifyResponse.isSuccess || !verifyResponse.data) {
+            if (!verifyResponse) {
                 return { isSuccess: false, message: 'Invalid password', data: null };
             }
 
@@ -132,6 +157,11 @@ export class UserService {
     }
 
     static async updateUser(userToUpdate: IUpdateUserDto, schema: string): Promise<DataBaseResponse<IUser>> {
+        const validation = UserValidator.validateUpdate(userToUpdate);
+        if (!validation.isValid) {
+            return { isSuccess: false, message: validation.message, data: null };
+        }
+
         let client;
         try {
             const userExists = await UserService.findUserById({ id: userToUpdate.id }, schema);
@@ -139,7 +169,8 @@ export class UserService {
                 return { isSuccess: false, message: 'User not found', data: null };
             }
 
-            const clientResponse = await DatabaseService.getClient(schema);
+            const database = new DatabaseService();
+            const clientResponse = await database.getClient(schema);
             if (!clientResponse.isSuccess || !clientResponse.data) {
                 throw new Error('Database connection failed');
             }
@@ -157,12 +188,12 @@ export class UserService {
             }
 
             if (userToUpdate.password) {
-                const hashResponse = await HashService.hash(userToUpdate.password);
-                if (!hashResponse.isSuccess || !hashResponse.data) {
+                const hashResponse = await new HashService().hash(userToUpdate.password);
+                if (!hashResponse) {
                     throw new Error('Failed to hash password');
                 }
                 updates.push(`password_hash = $${paramCount}`);
-                values.push(hashResponse.data);
+                values.push(hashResponse);
                 paramCount++;
             }
 

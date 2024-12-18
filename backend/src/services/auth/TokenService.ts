@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
-import { ITokenPayloadDTO } from '../models/interfaces/dtos/auth/ITokenPayloadDto';
-import { DataBaseResponse } from '../models/responses/DataBaseResponse';
+import { ITokenPayloadDTO } from '../../models/dtos/auth/token/ITokenPayloadDto';
+import { DataBaseResponse } from '../../models/responses/DataBaseResponse';
 
 export class TokenService {
     static generateToken(payload: object, jwtSecret: string): DataBaseResponse<string> {

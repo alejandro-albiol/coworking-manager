@@ -1,6 +1,6 @@
 import { Response, NextFunction } from 'express';
-import { TenantRequest } from '../models/types/TenantRequest';
-import { DatabaseService } from '../services/DatabaseService';
+import { TenantRequest } from '../types/TenantRequest';
+import { DatabaseService } from '../services/core/DatabaseService';
 
 export class TenantMiddleware {
     static async handle(req: TenantRequest, res: Response, next: NextFunction): Promise<void> {

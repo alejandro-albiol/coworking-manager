@@ -1,19 +1,18 @@
 process.env.NODE_ENV = 'test';
 
 import { config } from '../../src/config/database';
-import { UserService } from '../../src/services/UserService';
+import { UserService } from '../../src/services/domain/UserService';
 
 describe('UserService', () => {
+    const generateUniqueEmail = () => `test${Date.now()}@example.com`;
+
     beforeAll(() => {
-        console.log('Loaded database config:', {
-            ...config.database,
-            password: config.database.password ? 'REDACTED' : 'undefined'
-        });
+
     });
 
     test('should insert a new user', async () => {
         const newUser = {
-            email: 'test@example.com',
+            email: generateUniqueEmail(),
             password: 'testPassword123',
             first_name: 'Test',
             last_name: 'User',

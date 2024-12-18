@@ -1,8 +1,7 @@
 export interface ITenant {
     id: number;
+    name: string;
     subdomain: string;
     schema_name: string;
-    name: string;
     created_at: Date;
-    updated_at: Date;
 } 

@@ -1,5 +1,4 @@
-import { DatabaseService } from '../../src/services/DatabaseService';
-import { config } from '../../src/config/database';
+import { DatabaseService } from '../../src/services/core/DatabaseService';
 
 describe('DatabaseService', () => {
     const existingTenant = {
@@ -17,7 +16,8 @@ describe('DatabaseService', () => {
     });
 
     test('should get client with correct schema', async () => {
-        const result = await DatabaseService.getClient(existingTenant.schema_name);
+        const database = new DatabaseService();
+        const result = await database.getClient(existingTenant.schema_name);
         
         expect(result.isSuccess).toBe(true);
         expect(result.data).toBeDefined();

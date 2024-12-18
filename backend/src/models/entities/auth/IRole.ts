@@ -1,4 +1,4 @@
-export interface IUserRole {
+export interface IRole {
     id: number;
     name: string;
     description: string;

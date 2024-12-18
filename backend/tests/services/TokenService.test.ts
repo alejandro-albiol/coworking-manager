@@ -1,4 +1,4 @@
-import { TokenService } from '../../src/services/TokenService';
+import { TokenService } from '../../src/services/auth/TokenService';
 
 describe('TokenService', () => {
     const jwtSecret = 'test_secret';

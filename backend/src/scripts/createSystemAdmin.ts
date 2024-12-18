@@ -1,62 +1,48 @@
-import { DatabaseService } from '../services/DatabaseService';
-import { HashService } from '../services/HashService';
+import dotenv from 'dotenv';
+import { DatabaseService } from '../services/core/DatabaseService';
+import { HashService } from '../services/core/HashService';
+import { SystemAdminRepository } from '../repositories/SystemAdminRepository';
 
-async function createSystemAdmin(
-    email: string,
-    password: string,
-    name: string
-) {
-    const client = await DatabaseService.getClient('public');
-    if (!client.isSuccess || !client.data) {
-        console.error('Failed to connect to database');
-        return;
-    }
-
+async function createInitialAdmin() {
     try {
-        const existingAdmin = await client.data.query(
-            'SELECT id FROM system_admins WHERE email = $1',
-            [email]
-        );
-
-        if (existingAdmin.rows.length > 0) {
-            console.error('Admin already exists');
-            return;
+        dotenv.config({ path: '.env.admin' });
+        
+        const { ADMIN_EMAIL, ADMIN_PASSWORD, ADMIN_NAME } = process.env;
+        
+        if (!ADMIN_EMAIL || !ADMIN_PASSWORD || !ADMIN_NAME) {
+            console.error('Missing admin credentials in .env.admin');
+            process.exit(1);
         }
 
-        const hashResult = await HashService.hash(password);
+        const database = new DatabaseService();
+        const adminRepository = new SystemAdminRepository(database);
+
+        const hashResult = await new HashService().hash(ADMIN_PASSWORD);
         if (!hashResult.isSuccess || !hashResult.data) {
-            console.error('Failed to hash password');
-            return;
+            throw new Error('Failed to hash password');
         }
 
-        await client.data.query(
-            'INSERT INTO system_admins (email, password_hash, name, active) VALUES ($1, $2, $3, true)',
-            [email, hashResult.data, name]
-        );
+        const result = await adminRepository.create({
+            email: ADMIN_EMAIL,
+            password_hash: hashResult.data,
+            name: ADMIN_NAME
+        }, 'public');
 
-        console.log('System admin created successfully');
+        if (result.isSuccess) {
+            console.log('Admin created successfully:', {
+                email: ADMIN_EMAIL,
+                name: ADMIN_NAME
+            });
+        } else {
+            console.error('Failed to create admin:', result.message);
+        }
 
     } catch (error) {
-        console.error('Error creating system admin:', error);
+        console.error('Error creating admin:', error);
+        process.exit(1);
     } finally {
-        client.data.release();
+        process.exit(0);
     }
 }
 
-if (require.main === module) {
-    const email = process.env.ADMIN_EMAIL;
-    const password = process.env.ADMIN_PASSWORD;
-    const name = process.env.ADMIN_NAME;
-
-    if (!email || !password || !name) {
-        console.error('Missing required environment variables');
-        process.exit(1);
-    }
-
-    createSystemAdmin(email, password, name)
-        .then(() => process.exit(0))
-        .catch((error) => {
-            console.error(error);
-            process.exit(1);
-        });
-} 
+createInitialAdmin(); 
