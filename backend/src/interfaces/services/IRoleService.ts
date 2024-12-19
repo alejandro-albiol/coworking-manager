@@ -1,6 +1,6 @@
-import { IFindRoleByIdDto } from "../../models/dtos/auth/role/IFindRoleByIdDto";
-import { IFindRoleByNameDto } from "../../models/dtos/auth/role/IFindRoleByNameDto";
-import { IUpdateRoleDto } from "../../models/dtos/auth/role/IUpdateRoleDto";
+import { IFindRoleByIdDto } from "../dtos/auth/role/IFindRoleByIdDto";
+import { IFindRoleByNameDto } from "../dtos/auth/role/IFindRoleByNameDto";
+import { IUpdateRoleDto } from "../dtos/auth/role/IUpdateRoleDto";
 import { IRole } from "../../models/entities/auth/IRole";
 import { DataBaseResponse } from "../../models/responses/DataBaseResponse";
 

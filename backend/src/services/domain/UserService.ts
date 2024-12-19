@@ -2,13 +2,13 @@ import { IUser } from "../../models/entities/auth/IUser";
 import { DataBaseResponse } from "../../models/responses/DataBaseResponse";
 import { HashService } from "../core/HashService";
 import { DatabaseService } from "../core/DatabaseService";
-import { IUserToAuthenticateDto } from "../../models/dtos/auth/user/IUserToAuthenticateDto";
-import { IFindUserByEmailDto } from "../../models/dtos/auth/user/IFindUserByEmailDto";
-import { IFindUserByIdDto } from "../../models/dtos/auth/user/IFindUserById";
-import { IUpdateUserDto } from "../../models/dtos/auth/user/IUpdateUserDto";
-import { IUserInputDto } from "../../models/dtos/auth/user/IUserInputDto";
+import { IUserToAuthenticateDto } from "../../interfaces/dtos/auth/user/IUserToAuthenticateDto";
+import { IFindUserByEmailDto } from "../../interfaces/dtos/auth/user/IFindUserByEmailDto";
+import { IFindUserByIdDto } from "../../interfaces/dtos/auth/user/IFindUserById";
+import { IUpdateUserDto } from "../../interfaces/dtos/auth/user/IUpdateUserDto";
+import { IUserInputDto } from "../../interfaces/dtos/auth/user/IUserInputDto";
 import { UserRepository } from "../../repositories/UserRepository";
-import { ICreateUserDto } from "../../models/dtos/auth/user/ICreateUserDto";
+import { ICreateUserDto } from "../../interfaces/dtos/auth/user/ICreateUserDto";
 import { UserValidator } from "../../validators/user/UserValidator";
 
 export class UserService {

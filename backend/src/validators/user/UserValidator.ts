@@ -1,8 +1,8 @@
 import { BaseValidator } from "../common/BaseValidator";
-import { IUserInputDto } from "../../models/dtos/auth/user/IUserInputDto";
-import { IUpdateUserDto } from "../../models/dtos/auth/user/IUpdateUserDto";
+import { IUserInputDto } from "../../interfaces/dtos/auth/user/IUserInputDto";
+import { IUpdateUserDto } from "../../interfaces/dtos/auth/user/IUpdateUserDto";
 import { ValidatorResponse } from "../../models/responses/ValidatorResponse";
-import { IUserToAuthenticateDto } from "../../models/dtos/auth/user/IUserToAuthenticateDto";
+import { IUserToAuthenticateDto } from "../../interfaces/dtos/auth/user/IUserToAuthenticateDto";
 
 export class UserValidator extends BaseValidator {
     static validateCreate(user: IUserInputDto): ValidatorResponse {

@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import { ITokenPayloadDTO } from '../../models/dtos/auth/token/ITokenPayloadDto';
+import { ITokenPayloadDTO } from '../../interfaces/dtos/auth/token/ITokenPayloadDto';
 import { DataBaseResponse } from '../../models/responses/DataBaseResponse';
 
 export class TokenService {

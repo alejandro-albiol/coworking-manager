@@ -1,5 +1,5 @@
-import { ITenantCreateDto } from "../models/dtos/tenant/ITenantCreateDto";
-import { IUpdateTenantDto } from "../models/dtos/tenant/IUpdateTenantDto";
+import { ITenantCreateDto } from "../interfaces/dtos/tenant/ITenantCreateDto";
+import { IUpdateTenantDto } from "../interfaces/dtos/tenant/IUpdateTenantDto";
 import { ITenant } from "../models/entities/tenant/ITenant";
 import { ITenantOperationLog } from "../models/entities/tenant/ITenantOperationLog";
 import { DataBaseResponse } from "../models/responses/DataBaseResponse";

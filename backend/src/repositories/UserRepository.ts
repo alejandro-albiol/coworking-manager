@@ -1,5 +1,5 @@
-import { ICreateUserDto } from "../models/dtos/auth/user/ICreateUserDto";
-import { IUpdateUserDto } from "../models/dtos/auth/user/IUpdateUserDto";
+import { ICreateUserDto } from "../interfaces/dtos/auth/user/ICreateUserDto";
+import { IUpdateUserDto } from "../interfaces/dtos/auth/user/IUpdateUserDto";
 import { IUser } from "../models/entities/auth/IUser";
 import { DataBaseResponse } from "../models/responses/DataBaseResponse";
 import { BaseRepository } from "./BaseRepository";

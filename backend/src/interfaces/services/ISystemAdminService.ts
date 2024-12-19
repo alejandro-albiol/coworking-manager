@@ -1,4 +1,4 @@
-import { ICreateSystemAdminInputDto } from "../../models/dtos/auth/systemAdmin/ICreateSystemAdminInputDto";
+import { ICreateSystemAdminInputDto } from "../dtos/auth/systemAdmin/ICreateSystemAdminInputDto";
 import { ISystemAdmin } from "../../models/entities/auth/ISystemAdmin";
 import { DataBaseResponse } from "../../models/responses/DataBaseResponse";
 

@@ -16,4 +16,4 @@ export abstract class BaseValidator {
     protected static isUnique(value: string, existingValues: string[]): boolean {
         return !existingValues.includes(value);
     }
-}
+} 

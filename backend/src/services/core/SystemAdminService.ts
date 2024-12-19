@@ -1,7 +1,7 @@
 import { IDatabase } from "../../interfaces/database/IDatabase";
 import { ISystemAdminService } from "../../interfaces/services/ISystemAdminService";
-import { ICreateSystemAdminInputDto } from "../../models/dtos/auth/systemAdmin/ICreateSystemAdminInputDto";
-import { ICreateSystemAdminDto } from "../../models/dtos/auth/systemAdmin/ICreateSystemAdminDto";
+import { ICreateSystemAdminInputDto } from "../../interfaces/dtos/auth/systemAdmin/ICreateSystemAdminInputDto";
+import { ICreateSystemAdminDto } from "../../interfaces/dtos/auth/systemAdmin/ICreateSystemAdminDto";
 import { ISystemAdmin } from "../../models/entities/auth/ISystemAdmin";
 import { DataBaseResponse } from "../../models/responses/DataBaseResponse";
 import { SystemAdminRepository } from "../../repositories/SystemAdminRepository";

@@ -1,15 +1,18 @@
-import { ICreateSystemAdminDto } from "../models/dtos/auth/systemAdmin/ICreateSystemAdminDto";
-import { IUpdateSystemAdminDto } from "../models/dtos/auth/systemAdmin/IUpdateSystemAdminDto";
+import { ICreateSystemAdminDto } from "../interfaces/dtos/auth/systemAdmin/ICreateSystemAdminDto";
+import { IUpdateSystemAdminDto } from "../interfaces/dtos/auth/systemAdmin/IUpdateSystemAdminDto";
 import { ISystemAdmin } from "../models/entities/auth/ISystemAdmin";
-import { DataBaseResponse } from "../models/responses/DataBaseResponse";
-import { BaseRepository } from "./BaseRepository";
-import { IDatabase } from "../interfaces/database/IDatabase";
+import { Database } from "../database/Database";
+import { BaseRepository } from "./base/BaseRepository";
+
 export class SystemAdminRepository extends BaseRepository<ISystemAdmin, ICreateSystemAdminDto, IUpdateSystemAdminDto> {
-    constructor(database: IDatabase) {
+    findAll(schema: string): Promise<ISystemAdmin[]> {
+        throw new Error("Method not implemented.");
+    }
+    constructor(database: Database) {
         super(database);
     }
 
-    async create(admin: ICreateSystemAdminDto, schema: string): Promise<DataBaseResponse<ISystemAdmin>> {
+    async create(admin: ICreateSystemAdminDto, schema: string): Promise<ISystemAdmin> {
         try {
             const result = await this.database.query(
                 schema,
@@ -24,82 +27,41 @@ export class SystemAdminRepository extends BaseRepository<ISystemAdmin, ICreateS
             );
 
             if (!result) {
-                return {
-                    isSuccess: false,
-                    message: 'Database query failed',
-                    data: null
-                };
+                throw new Error('Failed to create admin');
             }
 
             if (result.rowCount === 0) {
-                return {
-                    isSuccess: false,
-                    message: 'No rows were affected',
-                    data: null
-                };
+                throw new Error('No rows were affected');
             }
 
-            return {
-                isSuccess: true,
-                message: 'Admin created successfully',
-                data: result.rows[0]
-            };
+            return result.rows[0];
 
         } catch (error) {
-            console.error('SystemAdminRepository.create - Error:', error);
-            return {
-                isSuccess: false,
-                message: error instanceof Error ? error.message : 'Unknown error occurred',
-                data: null
-            };
+            throw error instanceof Error ? error : new Error('Unknown database error');
         }
     }
 
-    async findById(id: number, schema: string): Promise<DataBaseResponse<ISystemAdmin>> {
+    async findById(id: number, schema: string): Promise<ISystemAdmin | null> {
         const result = await this.database.query(
             schema,
             'SELECT * FROM system_admins WHERE id = $1',
             [id]
         );
 
-        return {
-            isSuccess: (result?.rowCount ?? 0) > 0,
-            message: (result?.rowCount ?? 0) > 0 ? 'Admin found' : 'Admin not found',
-            data: result?.rows?.[0] || null
-        };
+        return result?.rows?.[0] || null;
     }
 
-    async findActiveAdmin(adminId: number, schema: string): Promise<DataBaseResponse<ISystemAdmin>> {
-        try {
-            const result = await this.database.query(
-                schema,
-                'SELECT * FROM system_admins WHERE id = $1 AND active = true',
-                [adminId]
-            );
+    async findActiveAdmin(adminId: number, schema: string): Promise<ISystemAdmin | null> {
+        const result = await this.database.query(
+            schema,
+            'SELECT * FROM system_admins WHERE id = $1 AND active = true',
+            [adminId]
+        );
 
-            if (!result || result.rowCount === 0) {
-                return {
-                    isSuccess: false,
-                    message: 'Admin not found',
-                    data: null
-                };
-            }
-
-            return {
-                isSuccess: true,
-                message: 'Admin found',
-                data: result.rows[0]
-            };
-        } catch (error) {
-            return {
-                isSuccess: false,
-                message: error instanceof Error ? error.message : 'Failed to find admin',
-                data: null
-            };
-        }
+        return result?.rows?.[0] || null;
     }
 
-    async update(admin: IUpdateSystemAdminDto, schema: string): Promise<DataBaseResponse<ISystemAdmin>> {
+    async update(admin: IUpdateSystemAdminDto, schema: string): Promise<ISystemAdmin> {
         const updates: string[] = [];
         const values: any[] = [];
         let paramCount = 1;
@@ -129,11 +91,7 @@ export class SystemAdminRepository extends BaseRepository<ISystemAdmin, ICreateS
         }
 
         if (updates.length === 0) {
-            return {
-                isSuccess: false,
-                message: 'No updates provided',
-                data: null
-            };
+            throw new Error('No updates provided');
         }
 
         values.push(admin.id);
@@ -146,24 +104,16 @@ export class SystemAdminRepository extends BaseRepository<ISystemAdmin, ICreateS
 
         const result = await this.database.query(schema, query, values);
 
-        return {
-            isSuccess: (result?.rowCount ?? 0) > 0,
-            message: (result?.rowCount ?? 0) > 0 ? 'Admin updated successfully' : 'Failed to update admin',
-            data: result?.rows?.[0] || null
-        };
+        return result?.rows?.[0] || null;
     }
 
-    async delete(id: number, schema: string): Promise<DataBaseResponse<ISystemAdmin>> {
+    async delete(id: number, schema: string): Promise<void> {
         const result = await this.database.query(
             schema,
             'UPDATE system_admins SET active = false, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *',
             [id]
         );
 
-        return {
-            isSuccess: (result?.rowCount ?? 0) > 0,
-            message: (result?.rowCount ?? 0) > 0 ? 'Admin deleted successfully' : 'Admin not found',
-            data: result?.rows?.[0] || null
-        };
+        return result?.rows?.[0] || null;
     }
 }   

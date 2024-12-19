@@ -1,130 +1,93 @@
-import { ICreateRoleDto } from "../../models/dtos/auth/role/ICreateRoleDto";
-import { IUpdateRoleDto } from "../../models/dtos/auth/role/IUpdateRoleDto";
-import { IRole } from "../../models/entities/auth/IRole";
-import { DataBaseResponse } from "../../models/responses/DataBaseResponse";
-import { DatabaseService } from "../core/DatabaseService";
-import { RoleValidator } from "../../validators/role/RoleValidator";
-import { SYSTEM_ROLES } from "../../constants/roles/roles";
 import { RoleRepository } from "../../repositories/RoleRepository";
-import { IFindRoleByIdDto } from "../../models/dtos/auth/role/IFindRoleByIdDto";
-import { IFindRoleByNameDto } from "../../models/dtos/auth/role/IFindRoleByNameDto";
+import { RoleValidator } from "../../validators/role/RoleValidator";
+import { RoleException } from "../../exceptions/RoleException";
+import { HttpResponse } from "../../models/responses/HttpResponse";
+import { IRoleDto } from "../../interfaces/dtos/auth/role/IRoleDto";
+import { IRoleInputDto } from "../../interfaces/dtos/auth/role/IRoleInputDto";
+import { ICreateRoleDto } from "../../interfaces/dtos/auth/role/ICreateRoleDto";
+import { IUpdateRoleDto } from "../../interfaces/dtos/auth/role/IUpdateRoleDto";
 
 export class RoleService {
-    static async insertNewRole(role: ICreateRoleDto, schema: string): Promise<DataBaseResponse<IRole>> {
-        const validation = RoleValidator.validateCreate(role);
-        if (!validation.isValid) {
-            return { isSuccess: false, message: validation.message, data: null };
+    constructor(private readonly roleRepository: RoleRepository) {}
+
+    async createRole(roleInput: IRoleInputDto, tenant: string): Promise<HttpResponse<IRoleDto>> {
+        const validationResult = RoleValidator.validateCreate(roleInput);
+        if (!validationResult.isValid) {
+            throw new RoleException(validationResult.message);
         }
 
-        if (this.isSystemRole(role.name)) {
-            return { isSuccess: false, message: 'Role name is reserved', data: null };
-        }
-
-        let client;
         try {
-            const database = new DatabaseService();
-            const roleRepository = new RoleRepository(database);
-            const clientResponse = await database.getClient(schema);
-            if (!clientResponse.isSuccess || !clientResponse.data) {
-                throw new Error('Database connection failed');
-            }
-            client = clientResponse.data;
+            const createRoleDto: ICreateRoleDto = {
+                name: roleInput.name,
+                description: roleInput.description
+            };
 
-            return roleRepository.create(role, schema);
+            const role = await this.roleRepository.create(createRoleDto, tenant);
+            return HttpResponse.created<IRoleDto>(role);
         } catch (error) {
-            return { isSuccess: false, message: 'Failed to create role', data: null };
-        } finally {
-            if (client) {
-                client.release();
-            }
+            throw new RoleException('Failed to create role');
         }
     }
 
-    static async updateRole(roleToUpdate: IUpdateRoleDto, schema: string): Promise<DataBaseResponse<IRole>> {
-        const validation = RoleValidator.validateUpdate(roleToUpdate);
-        if (!validation.isValid) {
-            return { isSuccess: false, message: validation.message, data: null };
+    async updateRole(id: number, roleInput: IRoleInputDto, tenant: string): Promise<HttpResponse<IRoleDto>> {
+        const validationResult = RoleValidator.validateUpdate({ id, ...roleInput });
+        if (!validationResult.isValid) {
+            throw new RoleException(validationResult.message);
         }
 
-        let client;
         try {
-            const database = new DatabaseService();
-            const roleRepository = new RoleRepository(database);
-            const clientResponse = await database.getClient(schema);
-            if (!clientResponse.isSuccess || !clientResponse.data) {
-                throw new Error('Database connection failed');
-            }
-            client = clientResponse.data;
+            const updateRoleDto: IUpdateRoleDto = {
+                id,
+                name: roleInput.name,
+                description: roleInput.description
+            };
 
-            const role = await this.findRoleById({ id: roleToUpdate.id }, schema);
-            if (!role.isSuccess || !role.data) {
-                return { isSuccess: false, message: 'Role not found', data: null };
-            }
-
-            if (this.isSystemRole(role.data.name)) {
-                return { isSuccess: false, message: 'Cannot modify system roles', data: null };
-            }
-
-            return roleRepository.update(roleToUpdate, schema);
+            const role = await this.roleRepository.update(updateRoleDto, tenant);
+            return HttpResponse.ok<IRoleDto>(role);
         } catch (error) {
-            return { isSuccess: false, message: 'Failed to update role', data: null };
-        } finally {
-            if (client) {
-                client.release();
-            }
+            throw new RoleException('Failed to update role');
         }
     }
 
-    static async deleteRole(roleId: number, schema: string): Promise<DataBaseResponse<IRole>> {
-        const validation = RoleValidator.validateDelete(roleId);
-        if (!validation.isValid) {
-            return { isSuccess: false, message: validation.message, data: null };
+    async findRoleById(id: number, tenant: string): Promise<HttpResponse<IRoleDto>> {
+        const validationResult = RoleValidator.validateFindById(id);
+        if (!validationResult.isValid) {
+            throw new RoleException(validationResult.message);
         }
 
-        let client;
         try {
-            const database = new DatabaseService();
-            const roleRepository = new RoleRepository(database);
-            const clientResponse = await database.getClient(schema);
-            if (!clientResponse.isSuccess || !clientResponse.data) {
-                throw new Error('Database connection failed');
+            const role = await this.roleRepository.findById(id, tenant);
+            if (!role) {
+                throw new RoleException('Role not found');
             }
-            client = clientResponse.data;
-
-            const role = await this.findRoleById({ id: roleId }, schema);
-            if (!role.isSuccess || !role.data) {
-                return { isSuccess: false, message: 'Role not found', data: null };
-            }
-
-            if (this.isSystemRole(role.data.name)) {
-                return { isSuccess: false, message: 'Cannot delete system roles', data: null };
-            }
-
-            return roleRepository.delete(roleId, schema);
+            return HttpResponse.ok<IRoleDto>(role);
         } catch (error) {
-            return { isSuccess: false, message: 'Failed to delete role', data: null };
-        } finally {
-            if (client) {
-                client.release();
-            }
+            throw error instanceof RoleException 
+                ? error 
+                : new RoleException('Failed to find role');
         }
     }
 
-    static async findRoleById(roleToFind: IFindRoleByIdDto, schema: string): Promise<DataBaseResponse<IRole>> {
-        const database = new DatabaseService();
-        const roleRepository = new RoleRepository(database);
-        return roleRepository.findById(roleToFind.id, schema);
+    async findAllRoles(tenant: string): Promise<HttpResponse<IRoleDto[]>> {
+        try {
+            const roles = await this.roleRepository.findAll(tenant);
+            return HttpResponse.ok<IRoleDto[]>(roles);
+        } catch (error) {
+            throw new RoleException('Failed to fetch roles');
+        }
     }
 
-    static async findRoleByName(roleToFind: IFindRoleByNameDto, schema: string): Promise<DataBaseResponse<IRole>> {
-        const database = new DatabaseService();
-        const roleRepository = new RoleRepository(database);
-        return roleRepository.findByName(roleToFind.name, schema);
-    }
+    async deleteRole(id: number, tenant: string): Promise<HttpResponse<void>> {
+        const validationResult = RoleValidator.validateDelete(id);
+        if (!validationResult.isValid) {
+            throw new RoleException(validationResult.message);
+        }
 
-    private static isSystemRole(roleName: string): boolean {
-        return Object.values(SYSTEM_ROLES).some(systemRole => 
-            systemRole.name.toLowerCase() === roleName.toLowerCase()
-        );
+        try {
+            await this.roleRepository.delete(id, tenant);
+            return HttpResponse.noContent();
+        } catch (error) {
+            throw new RoleException('Failed to delete role');
+        }
     }
 }
